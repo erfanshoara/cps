@@ -26,9 +26,6 @@ class Brand_t(Enum):
 
 # this represents one row of PileDevice class
 class DeviceInfo:
-    #
-    # var
-    #
 
     def __init__(self, _location, _serial_num, _id_tag):
         self.location   = str(_location)
@@ -44,9 +41,6 @@ class DeviceInfo:
 # the class is used for all type/model of devices  -mini, laptop, hp...
 # this basically represents the 3-column sets on sheets
 class PileDevice:
-    #
-    # var
-    #
 
     def __init__(self, _dev_type, _brand, _model):
         self.dev_type   = _dev_type
@@ -74,7 +68,6 @@ class PileDevice:
 #
 
 def sheet_to_listPile(df_sheet, dev_type, brand):
-
     # get all model names
     # {
     lst_keys = df_sheet.keys()
@@ -106,8 +99,23 @@ def sheet_to_listPile(df_sheet, dev_type, brand):
                     df_sheet[f"{_mdl}.tag"][_j]
                     )
 
-
     return lst_pile
+
+
+def check_pile(pile):
+    for _i, _dev in enumerate(pile.lst_dev):
+        if not re.match(r'^[A-Z0-9]{10}$', _dev.serial_num) and (
+                not _dev.serial_num == "NO_ID"):
+            return [False, (1, _i, _dev.serial_num)]
+
+        if not re.match(r'^[234][0-9]{4}$', _dev.id_tag) and (
+                not _dev.id_tag == "NO_ID"):
+            return [False, (2, _i, _dev.id_tag)]
+
+    # setting the len if it's off
+    pile.len_lst_dev = len(pile.lst_dev)
+
+    return [True, (0, 0)]
 
 
 #
@@ -116,6 +124,11 @@ def sheet_to_listPile(df_sheet, dev_type, brand):
 
 def main():
     file_xlsx = "cps.xlsx"
+    lst_info = [
+            'location',
+            'serial number',
+            'tag id'
+            ]
 
     df_laptop_hp        = pd.read_excel(file_xlsx, sheet_name='laptop_hp')
     df_laptop_surface   = pd.read_excel(file_xlsx, sheet_name='laptop_surface')
@@ -130,6 +143,29 @@ def main():
     lst_pile_3 = sheet_to_listPile(
             df_mini_hp, Device_t.MINI, Brand_t.HP)
 
+    # checking all
+    num_issues = 0
+    for _lst_pile in [
+            lst_pile_1,
+            lst_pile_2,
+            lst_pile_3
+            ]:
+
+        for _pile in _lst_pile:
+            ret = check_pile(_pile)
+
+            if not ret[0]:
+                num_issues += 1
+
+                print(f"Warning: the {lst_info[ret[1][0]]} for:\n" +
+                      f"DType: {_pile.dev_type.name}\n" +
+                      f"Brand: {_pile.brand.name}\n" +
+                      f"Model: {_pile.model}\n" +
+                      f"Index: {ret[1][1]}\n" +
+                      f"Value: {ret[1][2]}\n"
+                      )
+    print(f"Total issues: {num_issues}")
+            
 
 if __name__ == '__main__':
     main()
